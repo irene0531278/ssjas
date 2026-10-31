@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STUDY CARE AI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-icon">✦</span> STUDY CARE <b>AI</b></div>
+    <span class="status"><i></i> AI SYSTEM READY</span>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">PERSONAL LEARNING & HEALTH MANAGER</p>
+        <h1>공부와 건강의<br><span>균형을 설계하다.</span></h1>
+        <p class="hero-desc">학습 데이터와 생활 습관을 분석해 나에게 맞는 학습 계획을 추천해 줘.</p>
+      </div>
+      <div class="hero-symbol">✧</div>
+    </section>
+
+    <section class="stats">
+      <article class="stat-card"><span>누적 학습 기록</span><strong>{{ totals['count'] }}<small> 회</small></strong></article>
+      <article class="stat-card"><span>누적 공부 시간</span><strong>{{ (totals['total_minutes'] // 60) }}<small>시간</small> {{ (totals['total_minutes'] % 60) }}<small>분</small></strong></article>
+      <article class="stat-card"><span>평균 정답률</span><strong>{{ "%.1f"|format(totals['avg_accuracy']) }}<small>%</small></strong></article>
+    </section>
+
+    <div class="section-heading">
+      <div><p class="eyebrow">01 / DATA INPUT</p><h2>오늘의 데이터 입력</h2></div>
+      <p>입력한 데이터를 AI가 분석해.</p>
+    </div>
+
+    <section class="panel">
+      <form id="analysisForm">
+        <div class="form-grid">
+          <label>오늘 공부한 시간 <span class="unit">(분)</span>
+            <input type="number" id="study_minutes" min="0" max="1440" value="120" required>
+          </label>
+          <label>최근 학습 정답률 <span class="unit">(%)</span>
+            <input type="number" id="accuracy" min="0" max="100" value="80" required>
+          </label>
+          <label>어제 수면 시간 <span class="unit">(시간)</span>
+            <input type="number" id="sleep_hours" min="0" max="24" step="0.5" value="7" required>
+          </label>
+          <label>자세 상태 <span class="unit">(1 나쁨 ~ 5 좋음)</span>
+            <select id="posture_score">
+              <option value="1">1 - 매우 불편함</option><option value="2">2 - 불편함</option>
+              <option value="3" selected>3 - 보통</option><option value="4">4 - 양호</option>
+              <option value="5">5 - 매우 좋음</option>
+            </select>
+          </label>
+          <label>현재 피로도 <span class="unit">(1 낮음 ~ 5 높음)</span>
+            <select id="fatigue">
+              <option value="1">1 - 거의 피곤하지 않음</option><option value="2">2 - 조금 피곤함</option>
+              <option value="3" selected>3 - 보통</option><option value="4">4 - 피곤함</option>
+              <option value="5">5 - 매우 피곤함</option>
+            </select>
+          </label>
+          <label>현재 집중도 <span class="unit">(1 낮음 ~ 5 높음)</span>
+            <select id="focus">
+              <option value="1">1 - 매우 낮음</option><option value="2">2 - 낮음</option>
+              <option value="3" selected>3 - 보통</option><option value="4">4 - 높음</option>
+              <option value="5">5 - 매우 높음</option>
+            </select>
+          </label>
+        </div>
+        <button class="primary-btn" type="submit">✦ AI 분석 및 맞춤 계획 생성</button>
+      </form>
+    </section>
+
+    <section id="resultSection" class="result-section hidden">
+      <div class="section-heading">
+        <div><p class="eyebrow">02 / AI ANALYSIS</p><h2>AI 분석 결과</h2></div>
+        <span class="tag">PERSONALIZED</span>
+      </div>
+      <div class="recommend-grid">
+        <article class="recommend-card main-recommend">
+          <span>AI 추천 집중 학습 시간</span>
+          <strong id="recommendedTime">--<small>분</small></strong>
+          <p>추천 학습 블록 길이</p>
+        </article>
+        <article class="recommend-card">
+          <span>추천 휴식 시간</span>
+          <strong id="breakTime">--<small>분</small></strong>
+          <p>학습 블록 이후 휴식</p>
+        </article>
+        <article class="recommend-card">
+          <span>모델 예상 점수</span>
+          <strong id="predictedScore">--<small>/100</small></strong>
+          <p>시뮬레이션 기반 예측값</p>
+        </article>
+      </div>
+      <div class="panel feedback-panel">
+        <h3>맞춤형 피드백</h3>
+        <ul id="feedbackList"></ul>
+        <p class="disclaimer" id="modelNote"></p>
+      </div>
+    </section>
+
+    <div class="section-heading">
+      <div><p class="eyebrow">03 / LIVE STUDY</p><h2>학습 타이머 & 상태 체크</h2></div>
+      <p>공부 중 상태를 직접 체크해 줘.</p>
+    </div>
+    <section class="panel timer-panel">
+      <div class="timer-display" id="timerDisplay">25:00</div>
+      <p class="timer-caption" id="timerCaption">분석 후 추천 시간으로 타이머를 설정할 수 있어.</p>
+      <div class="timer-actions">
+        <button class="primary-btn" id="startTimer" type="button">시작</button>
+        <button class="secondary-btn" id="pauseTimer" type="button">일시정지</button>
+        <button class="secondary-btn" id="resetTimer" type="button">초기화</button>
+      </div>
+      <div class="checkin">
+        <h3>실시간 상태 체크</h3>
+        <p class="muted">집중도와 피로도를 직접 선택하면 즉시 피드백을 보여 줘.</p>
+        <div class="checkin-grid">
+          <label>집중도
+            <select id="liveFocus"><option value="1">1 매우 낮음</option><option value="2">2 낮음</option><option value="3" selected>3 보통</option><option value="4">4 높음</option><option value="5">5 매우 높음</option></select>
+          </label>
+          <label>피로도
+            <select id="liveFatigue"><option value="1">1 낮음</option><option value="2">2 조금 피곤</option><option value="3" selected>3 보통</option><option value="4">4 피곤</option><option value="5">5 매우 피곤</option></select>
+          </label>
+          <label>자세
+            <select id="livePosture"><option value="1">1 매우 불편</option><option value="2">2 불편</option><option value="3" selected>3 보통</option><option value="4">4 양호</option><option value="5">5 매우 좋음</option></select>
+          </label>
+        </div>
+        <button class="secondary-btn" id="checkinBtn" type="button">상태 피드백 확인</button>
+        <p id="liveFeedback" class="live-feedback">상태를 체크하면 여기에 안내가 표시돼.</p>
+      </div>
+    </section>
+
+    <section class="section-heading">
+      <div><p class="eyebrow">04 / LEARNING HISTORY</p><h2>학습 기록</h2></div>
+      <p>저장된 최근 기록을 확인해.</p>
+    </section>
+    <section class="panel">
+      <div class="chart-wrap"><canvas id="historyChart"></canvas></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>날짜</th><th>실제 공부</th><th>정답률</th><th>예측 점수</th></tr></thead>
+          <tbody>
+          {% for item in history %}
+            <tr><td>{{ item['created_at'] }}</td><td>{{ item['actual_minutes'] }}분</td><td>{{ "%.1f"|format(item['accuracy']) }}%</td><td>{{ "%.1f"|format(item['predicted_score']) }}</td></tr>
+          {% else %}
+            <tr><td colspan="4" class="empty">아직 저장된 기록이 없어. AI 분석 후 학습 기록을 저장해 봐.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="saveSection" class="panel save-panel hidden">
+      <h3>이번 학습 기록 저장</h3>
+      <label>실제로 공부한 시간(분)<input type="number" id="actualMinutes" min="0" max="1440" value="25"></label>
+      <label>메모(선택)<input type="text" id="notes" maxlength="300" placeholder="예: 수학 오답 정리"></label>
+      <button class="primary-btn" id="saveBtn" type="button">학습 기록 저장</button>
+      <p id="saveMessage" class="muted"></p>
+    </section>
+
+    <footer>STUDY CARE AI · 학습과 건강의 균형을 위한 시연용 프로토타입</footer>
+  </main>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
